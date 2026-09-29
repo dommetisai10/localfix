@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.models import User, Provider, UserRole, ProviderStatus
@@ -90,8 +91,6 @@ def register_provider(payload: ProviderRegister, db: Session = Depends(get_db)):
     )
     return {"access_token": token, "token_type": "bearer", "user": user_out}
 
-
-from sqlalchemy import func
 
 @router.post("/login", response_model=Token)
 def login(payload: UserLogin, db: Session = Depends(get_db)):
