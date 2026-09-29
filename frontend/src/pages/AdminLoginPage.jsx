@@ -113,26 +113,6 @@ export default function AdminLoginPage() {
               {loading ? 'Verifying Admin Privileges...' : 'Authenticate Admin Session'}
             </button>
           </form>
-
-          {/* Quick Admin Helper Box */}
-          <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-3.5 space-y-2 text-center text-xs">
-            <div className="flex items-center justify-center gap-1.5 text-sky-400 font-bold">
-              <KeyRound className="w-3.5 h-3.5" />
-              <span>Admin Credentials Helper</span>
-            </div>
-            <p className="text-[11px] text-slate-400">
-              Email: <code className="text-slate-200 bg-slate-900 px-1.5 py-0.5 rounded font-mono">dommetisai@localfix.com</code>
-              <br />
-              Password: <code className="text-slate-200 bg-slate-900 px-1.5 py-0.5 rounded font-mono">Dommetisai</code>
-            </p>
-            <button
-              type="button"
-              onClick={handleFillCredentials}
-              className="text-[11px] font-bold text-sky-400 hover:underline pt-1 block mx-auto"
-            >
-              Click to Auto-fill Admin Credentials
-            </button>
-          </div>
         </div>
       </div>
     </div>

@@ -89,10 +89,13 @@ def register_provider(payload: ProviderRegister, db: Session = Depends(get_db)):
     return {"access_token": token, "token_type": "bearer", "user": user_out}
 
 
+from sqlalchemy import func
+
 @router.post("/login", response_model=Token)
 def login(payload: UserLogin, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == payload.email).first()
-    if not user or not verify_password(payload.password, user.password_hash):
+    clean_email = payload.email.strip().lower()
+    user = db.query(User).filter(func.lower(User.email) == clean_email).first()
+    if not user or not verify_password(payload.password.strip(), user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     provider_status = None
