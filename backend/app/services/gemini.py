@@ -1,4 +1,5 @@
 import os
+import re
 import json
 from dotenv import load_dotenv
 
@@ -30,6 +31,101 @@ def call_gemini_api(prompt: str, system_instruction: str = "") -> str:
         return None
 
 
+# Keyword map with regex word boundary patterns for all seeded categories
+CATEGORY_KEYWORD_MAP = [
+    (
+        r"\b(ac|a/c|air conditioner|air conditioning|cooling|refrigerant|chiller)\b",
+        "AC Repair",
+        "Low refrigerant, compressor fault, or dirty coil",
+        "Cooling efficiency issue detected. We recommend booking a certified AC Repair technician."
+    ),
+    (
+        r"\b(washing machine|washer|dryer)\b",
+        "Washing Machine Repair",
+        "Motor noise, drum vibration, or drain pump issue",
+        "Washing machine malfunction detected. We recommend booking an Appliance Technician."
+    ),
+    (
+        r"\b(ro|water purifier|purifier|aquaguard|water filter)\b",
+        "RO Water Purifier",
+        "Filter blockage or TDS membrane degradation",
+        "Water purifier servicing required. We recommend booking an RO Purifier Specialist."
+    ),
+    (
+        r"\b(laptop|macbook|trackpad)\b",
+        "Laptop Repair",
+        "Hardware error, battery degradation, or screen issue",
+        "Laptop problem detected. We recommend booking a certified Laptop Repair Technician."
+    ),
+    (
+        r"\b(computer|desktop|pc|motherboard|cpu)\b",
+        "Computer Repair",
+        "System freeze, power supply failure, or hardware fault",
+        "Computer failure detected. We recommend booking a Computer Repair Specialist."
+    ),
+    (
+        r"\b(mobile|smartphone|iphone|android|cellphone)\b",
+        "Mobile Repair",
+        "Screen damage, battery drain, or charging port fault",
+        "Mobile device issue detected. We recommend booking a Mobile Repair Specialist."
+    ),
+    (
+        r"\b(plumb|plumber|pipe|leaking|leak|faucet|tap|drain|drainage|sewer|sink|toilet)\b",
+        "Plumber",
+        "Pipe joint leak, blocked drain, or valve failure",
+        "Plumbing issue detected. We recommend booking a licensed Plumber immediately."
+    ),
+    (
+        r"\b(electric|electrician|wiring|wire|spark|switch|socket|fuse|mcb|short circuit)\b",
+        "Electrician",
+        "Short circuit, faulty wiring, or tripped breaker",
+        "Electrical fault detected. We recommend booking a certified Master Electrician."
+    ),
+    (
+        r"\b(clean|cleaning|sanitization|sofa|carpet|dusting)\b",
+        "Home Cleaning",
+        "Dust buildup or deep sanitization required",
+        "Sanitization needed. We recommend booking a Home Cleaning team."
+    ),
+    (
+        r"\b(carpenter|wood|wooden|furniture|door|hinge|cabinet|table|chair)\b",
+        "Carpenter",
+        "Woodwork repair, hinge adjustment, or custom fitting",
+        "Carpentry work needed. We recommend booking an experienced Carpenter."
+    ),
+    (
+        r"\b(painter|paint|painting|wallpaper|wall color|whitewash)\b",
+        "Painter",
+        "Wall paint peeling, surface prep, or repainting",
+        "Wall surface issue detected. We recommend booking professional Painters."
+    ),
+    (
+        r"\b(refrigerator|fridge|microwave|oven|stove|chimney|dishwasher)\b",
+        "Appliance Repair",
+        "Appliance component failure or heating issue",
+        "Appliance issue detected. We recommend booking an Appliance Repair technician."
+    ),
+    (
+        r"\b(tutor|tuition|teacher|coaching|maths|science|studies)\b",
+        "Home Tutor",
+        "Academic assistance required",
+        "Home tutoring needed. We recommend connecting with qualified Home Tutors."
+    ),
+    (
+        r"\b(beauty|salon|facial|makeup|haircut|waxing|manicure|pedicure)\b",
+        "Beauty Services",
+        "Personal grooming or salon service requested",
+        "Beauty service requested. We recommend booking professional Beauty Specialists."
+    ),
+    (
+        r"\b(pest|termite|cockroach|bugs|bug|rat|rats|rodent|ants|mosquito)\b",
+        "Pest Control",
+        "Pest infestation or preventative treatment needed",
+        "Pest activity detected. We recommend booking certified Pest Control professionals."
+    ),
+]
+
+
 def generate_service_recommendation(user_prompt: str) -> dict:
     system_prompt = (
         "You are an expert home service diagnostic system for LocalFix. "
@@ -39,44 +135,26 @@ def generate_service_recommendation(user_prompt: str) -> dict:
     raw = call_gemini_api(user_prompt, system_prompt)
     if raw:
         try:
-            # try to parse JSON
             cleaned = raw.strip().replace("```json", "").replace("```", "")
             return json.loads(cleaned)
         except Exception:
             pass
 
-    # Fallback smart matching logic if API key is not configured or rate-limited
+    # Whole-word regex matching
     text_lower = user_prompt.lower()
-    if "ac" in text_lower or "cool" in text_lower or "air" in text_lower:
-        return {
-            "recommendedCategory": "AC Repair",
-            "possibleIssue": "Low refrigerant, compressor fault, or dirty filter",
-            "recommendation": "Your AC system appears to have a cooling efficiency drop. We recommend booking a certified AC Repair technician for diagnostics."
-        }
-    elif "leak" in text_lower or "pipe" in text_lower or "water" in text_lower or "plumb" in text_lower or "drain" in text_lower:
-        return {
-            "recommendedCategory": "Plumber",
-            "possibleIssue": "Pipe joint failure or main line blockage",
-            "recommendation": "Active plumbing leak detected. We recommend booking a licensed Plumber immediately to prevent water damage."
-        }
-    elif "wire" in text_lower or "spark" in text_lower or "light" in text_lower or "electric" in text_lower or "switch" in text_lower:
-        return {
-            "recommendedCategory": "Electrician",
-            "possibleIssue": "Short circuit or overloaded circuit breaker",
-            "recommendation": "Electrical fault detected. We recommend booking a certified Master Electrician."
-        }
-    elif "clean" in text_lower or "dust" in text_lower or "sofa" in text_lower:
-        return {
-            "recommendedCategory": "Home Cleaning",
-            "possibleIssue": "Deep dust accumulation or carpet stain",
-            "recommendation": "Deep home cleaning and sanitization recommended."
-        }
-    else:
-        return {
-            "recommendedCategory": "General Service",
-            "possibleIssue": "Maintenance check required",
-            "recommendation": f"Based on '{user_prompt}', we recommend browsing top-rated local professionals on LocalFix."
-        }
+    for pattern, category, issue, recommendation in CATEGORY_KEYWORD_MAP:
+        if re.search(pattern, text_lower):
+            return {
+                "recommendedCategory": category,
+                "possibleIssue": issue,
+                "recommendation": recommendation
+            }
+
+    return {
+        "recommendedCategory": "General Service",
+        "possibleIssue": "Maintenance check required",
+        "recommendation": f"Based on '{user_prompt}', we recommend browsing top-rated local professionals on LocalFix."
+    }
 
 
 def generate_provider_description(name: str, category: str, experience_years: int, city: str) -> str:

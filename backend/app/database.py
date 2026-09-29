@@ -5,8 +5,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# PostgreSQL default for local development per requirement
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/localfix")
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+db_type = "SQLite" if (DATABASE_URL and DATABASE_URL.startswith("sqlite")) or not DATABASE_URL else "PostgreSQL"
+print(f"[Database] Initializing connection to database type: {db_type}")
+
+if not DATABASE_URL:
+    DATABASE_URL = "sqlite:///./localfix.db"
 
 # Render / Heroku compatibility: Ensure postgresql+psycopg2:// scheme is used for psycopg2-binary
 if DATABASE_URL.startswith("postgres://"):
@@ -23,11 +29,16 @@ try:
     # Test connection attempt
     with engine.connect() as conn:
         pass
+    print(f"[Database] Successfully connected to {db_type} database.")
 except Exception as e:
-    print(f"[Database Warning] Unable to connect to {DATABASE_URL}: {e}")
-    print("[Database Warning] Defaulting to SQLite database localfix.db for dev fallback.")
-    DATABASE_URL = "sqlite:///./localfix.db"
-    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+    if ENVIRONMENT == "development":
+        print(f"[Database Warning] Connection failed: {e}. Falling back to SQLite because ENVIRONMENT=development.")
+        DATABASE_URL = "sqlite:///./localfix.db"
+        engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+        print("[Database] Using SQLite fallback database.")
+    else:
+        print(f"[Database Error] Connection failed: {e}. Refusing SQLite fallback in {ENVIRONMENT} environment.")
+        raise e
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

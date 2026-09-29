@@ -12,6 +12,9 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
 def register_customer(payload: UserRegister, db: Session = Depends(get_db)):
+    if len(payload.password.strip()) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters long")
+
     clean_email = payload.email.strip().lower()
     existing = db.query(User).filter(func.lower(User.email) == clean_email).first()
     if existing:
@@ -45,38 +48,51 @@ def register_customer(payload: UserRegister, db: Session = Depends(get_db)):
 
 @router.post("/register-provider", response_model=Token, status_code=status.HTTP_201_CREATED)
 def register_provider(payload: ProviderRegister, db: Session = Depends(get_db)):
+    if len(payload.password.strip()) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters long")
+
     clean_email = payload.email.strip().lower()
     existing = db.query(User).filter(func.lower(User.email) == clean_email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email is already registered")
 
-    user = User(
-        full_name=payload.name,
-        email=clean_email,
-        mobile_number=payload.mobile,
-        password_hash=hash_password(payload.password.strip()),
-        role=UserRole.PROVIDER.value,
-        location=payload.address,
-        city=payload.city
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+    # Link category by name
+    from app.models.models import ServiceCategory
+    cat_obj = db.query(ServiceCategory).filter(func.lower(ServiceCategory.name) == payload.category.strip().lower()).first()
+    service_cat_id = cat_obj.id if cat_obj else None
 
-    # Provider accounts start as PENDING per requirement!
-    provider = Provider(
-        user_id=user.id,
-        category=payload.category,
-        experience_years=payload.experienceYears,
-        hourly_rate=payload.hourlyRate,
-        description=payload.description,
-        city=payload.city,
-        location=f"{payload.address}, {payload.city}" if payload.address else payload.city,
-        status=ProviderStatus.PENDING.value,
-        working_hours=payload.workingHours
-    )
-    db.add(provider)
-    db.commit()
+    try:
+        user = User(
+            full_name=payload.name,
+            email=clean_email,
+            mobile_number=payload.mobile,
+            password_hash=hash_password(payload.password.strip()),
+            role=UserRole.PROVIDER.value,
+            location=payload.address,
+            city=payload.city
+        )
+        db.add(user)
+        db.flush()
+
+        # Provider accounts start as PENDING per requirement
+        provider = Provider(
+            user_id=user.id,
+            service_category_id=service_cat_id,
+            category=payload.category,
+            experience_years=payload.experienceYears,
+            hourly_rate=payload.hourlyRate,
+            description=payload.description,
+            city=payload.city,
+            location=f"{payload.address}, {payload.city}" if payload.address else payload.city,
+            status=ProviderStatus.PENDING.value,
+            working_hours=payload.workingHours
+        )
+        db.add(provider)
+        db.commit()
+        db.refresh(user)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Registration failed: {str(e)}")
 
     token = create_access_token({"sub": str(user.id), "role": user.role})
     user_out = UserOut(

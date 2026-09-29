@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, date, timezone
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -16,16 +17,47 @@ def create_booking(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    # Only CUSTOMER (or ADMIN) can create bookings
+    if current_user.role == UserRole.PROVIDER.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Service providers cannot create customer bookings."
+        )
+
     provider = db.query(Provider).filter(Provider.id == payload.provider_id).first()
     if not provider:
         raise HTTPException(status_code=404, detail="Provider not found")
 
-    # DOUBLE BOOKING PREVENTION CHECK
+    # Reject bookings for non-APPROVED providers
+    if provider.status != "APPROVED":
+        raise HTTPException(
+            status_code=400,
+            detail="Selected provider is not currently approved to accept bookings."
+        )
+
+    # Date and Time sanity check
+    try:
+        booking_date = datetime.strptime(payload.date, "%Y-%m-%d").date()
+        today = datetime.now(timezone.utc).date()
+        if booking_date < today:
+            raise HTTPException(status_code=400, detail="Booking date cannot be in the past.")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
+
+    if not payload.time or not payload.time.strip():
+        raise HTTPException(status_code=400, detail="Time slot is required.")
+
+    # DOUBLE BOOKING PREVENTION CHECK across all active statuses
     existing_conflict = db.query(Booking).filter(
         Booking.provider_id == payload.provider_id,
         Booking.date == payload.date,
         Booking.time == payload.time,
-        Booking.status.in_([BookingStatus.PENDING.value, BookingStatus.ACCEPTED.value, BookingStatus.STARTED.value])
+        Booking.status.in_([
+            BookingStatus.PENDING.value,
+            BookingStatus.ACCEPTED.value,
+            BookingStatus.ON_THE_WAY.value,
+            BookingStatus.STARTED.value
+        ])
     ).first()
 
     if existing_conflict:
@@ -130,12 +162,72 @@ def update_booking_status(
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
 
+    new_status = payload.status
     valid_statuses = [e.value for e in BookingStatus]
-    if payload.status not in valid_statuses:
+    if new_status not in valid_statuses:
         raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of {valid_statuses}")
 
-    booking.status = payload.status
-    if payload.status == BookingStatus.COMPLETED.value:
+    is_admin = current_user.role == UserRole.ADMIN.value
+    is_customer = current_user.id == booking.customer_id
+    is_provider = current_user.provider_profile and current_user.provider_profile.id == booking.provider_id
+
+    # Enforce Authorization
+    if not (is_admin or is_customer or is_provider):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update this booking."
+        )
+
+    if is_customer and not is_admin:
+        if new_status != BookingStatus.CANCELLED.value:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Customers may only cancel bookings."
+            )
+        if booking.status not in [BookingStatus.PENDING.value, BookingStatus.ACCEPTED.value]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot cancel booking once it is in {booking.status} state."
+            )
+
+    if is_provider and not is_admin:
+        allowed_provider_statuses = [
+            BookingStatus.ACCEPTED.value,
+            BookingStatus.REJECTED.value,
+            BookingStatus.ON_THE_WAY.value,
+            BookingStatus.STARTED.value,
+            BookingStatus.COMPLETED.value
+        ]
+        if new_status not in allowed_provider_statuses:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Providers cannot set this status."
+            )
+
+    # State Machine Transitions Validation
+    current_st = booking.status
+    allowed_transitions = {
+        BookingStatus.PENDING.value: [BookingStatus.ACCEPTED.value, BookingStatus.REJECTED.value, BookingStatus.CANCELLED.value],
+        BookingStatus.ACCEPTED.value: [BookingStatus.ON_THE_WAY.value, BookingStatus.STARTED.value, BookingStatus.CANCELLED.value],
+        BookingStatus.ON_THE_WAY.value: [BookingStatus.STARTED.value, BookingStatus.CANCELLED.value],
+        BookingStatus.STARTED.value: [BookingStatus.COMPLETED.value],
+        BookingStatus.COMPLETED.value: [],
+        BookingStatus.REJECTED.value: [],
+        BookingStatus.CANCELLED.value: []
+    }
+
+    if current_st != new_status and not is_admin:
+        valid_next = allowed_transitions.get(current_st, [])
+        if new_status not in valid_next:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid transition from '{current_st}' to '{new_status}'."
+            )
+
+    # Increment completed_bookings only once when entering COMPLETED status
+    old_status = booking.status
+    booking.status = new_status
+    if old_status != BookingStatus.COMPLETED.value and new_status == BookingStatus.COMPLETED.value:
         p = db.query(Provider).filter(Provider.id == booking.provider_id).first()
         if p:
             p.completed_bookings = (p.completed_bookings or 0) + 1
@@ -146,8 +238,8 @@ def update_booking_status(
     # Send Notification to Customer
     db.add(Notification(
         user_id=booking.customer_id,
-        title=f"Booking {payload.status.replace('_', ' ').title()}",
-        message=f"Your booking #{booking.booking_reference} has been updated to {payload.status}.",
+        title=f"Booking {new_status.replace('_', ' ').title()}",
+        message=f"Your booking #{booking.booking_reference} has been updated to {new_status}.",
         notification_type="booking"
     ))
     db.commit()

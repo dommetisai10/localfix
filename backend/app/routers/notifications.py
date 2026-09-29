@@ -27,6 +27,19 @@ def get_notifications(
     ]
 
 
+@router.put("/read-all")
+def mark_all_notifications_read(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    db.query(Notification).filter(
+        Notification.user_id == current_user.id,
+        Notification.read == False
+    ).update({"read": True}, synchronize_session=False)
+    db.commit()
+    return {"message": "All notifications marked as read"}
+
+
 @router.put("/{id}/read")
 def mark_notification_read(
     id: int,

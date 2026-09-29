@@ -30,21 +30,18 @@ export default function AdminLoginPage() {
     } catch (err) {
       if (!err.response) {
         addNotification(
-          "Server Waking Up / Unreachable",
-          "Connecting to backend. Render free tier takes 20-30 seconds to wake up on cold start. Please wait and try again.",
+          "Server Unreachable",
+          "Cannot reach server. It may be waking up (Render free tier can take 30-60s). Please retry.",
           "error"
         );
+      } else if (err.response.status === 401) {
+        addNotification("Login Failed", "Invalid email or password", "error");
       } else {
-        addNotification("Login Failed", err.response?.data?.detail || "Invalid admin credentials", "error");
+        addNotification("Login Failed", err.response?.data?.detail || "An unexpected error occurred", "error");
       }
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleFillCredentials = () => {
-    setEmail('dommetisai@localfix.com');
-    setPassword('Dommetisai');
   };
 
   return (
@@ -119,15 +116,6 @@ export default function AdminLoginPage() {
               className="w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-sky-500/25 transition-all active:scale-[0.99]"
             >
               {loading ? 'Verifying Admin Privileges...' : 'Authenticate Admin Session'}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleFillCredentials}
-              className="w-full py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-slate-400 hover:text-sky-400 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors"
-            >
-              <KeyRound className="w-3.5 h-3.5" />
-              Auto-fill Demo Admin Credentials
             </button>
           </form>
         </div>

@@ -36,39 +36,35 @@ export default function AiAssistantModal({ isOpen, onClose, onSelectProvider }) 
         }
       ]);
     } catch (err) {
-      // Fallback smart AI response if backend connection is offline or starting up
-      setTimeout(() => {
-        let responseText = "I analyze your request to find the ideal professional.";
-        let category = "AC Repair";
-        
-        const textLower = userText.toLowerCase();
-        if (textLower.includes("ac") || textLower.includes("cooling") || textLower.includes("air condition")) {
-          responseText = "Based on your description, your AC unit might have low refrigerant, a dirty evaporator coil, or a faulty compressor. I strongly recommend booking an AC Repair Specialist for diagnostics.";
-          category = "AC Repair";
-        } else if (textLower.includes("pipe") || textLower.includes("leak") || textLower.includes("plumber") || textLower.includes("water") || textLower.includes("drain")) {
-          responseText = "This indicates a plumbing issue such as a pipe leak or clogged drain line. I recommend booking an experienced Plumber.";
-          category = "Plumber";
-        } else if (textLower.includes("light") || textLower.includes("wire") || textLower.includes("spark") || textLower.includes("switch") || textLower.includes("electric")) {
-          responseText = "Electrical issues require immediate certified attention to prevent hazards. I recommend a Master Electrician.";
-          category = "Electrician";
-        } else if (textLower.includes("clean") || textLower.includes("sofa") || textLower.includes("dust")) {
-          responseText = "For overall home sanitation and deep sofa/carpet washing, our Home Cleaning professionals are best suited.";
-          category = "Home Cleaning";
-        } else {
-          responseText = `Based on "${userText}", I suggest searching our top-rated local service technicians for immediate assistance.`;
-          category = "All Services";
-        }
+      let responseText = "The AI service is currently unavailable or taking too long to respond. Based on your keywords, here is a general recommendation:";
+      let category = "AC Repair";
 
-        setMessages((prev) => [
-          ...prev,
-          {
-            sender: 'ai',
-            text: responseText,
-            category: category
-          }
-        ]);
-        setLoading(false);
-      }, 700);
+      const textLower = userText.toLowerCase();
+      if (textLower.includes("ac") || textLower.includes("cooling") || textLower.includes("air condition")) {
+        responseText = "AI Service Unavailable (Offline Keyword Match): For cooling or AC issues, we recommend booking an AC Repair Specialist for diagnostics.";
+        category = "AC Repair";
+      } else if (textLower.includes("pipe") || textLower.includes("leak") || textLower.includes("plumber") || textLower.includes("water") || textLower.includes("drain")) {
+        responseText = "AI Service Unavailable (Offline Keyword Match): For pipe leaks or drain issues, we recommend booking an experienced Plumber.";
+        category = "Plumber";
+      } else if (textLower.includes("light") || textLower.includes("wire") || textLower.includes("spark") || textLower.includes("switch") || textLower.includes("electric")) {
+        responseText = "AI Service Unavailable (Offline Keyword Match): For electrical issues, we recommend booking a certified Electrician.";
+        category = "Electrician";
+      } else if (textLower.includes("clean") || textLower.includes("sofa") || textLower.includes("dust")) {
+        responseText = "AI Service Unavailable (Offline Keyword Match): For home sanitation and cleaning, we recommend Home Cleaning.";
+        category = "Home Cleaning";
+      } else {
+        responseText = `AI Service Unavailable: We could not reach Gemini AI for "${userText}". Please browse our top-rated local providers directly.`;
+        category = "All Services";
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: 'ai',
+          text: responseText,
+          category: category
+        }
+      ]);
     } finally {
       setLoading(false);
     }

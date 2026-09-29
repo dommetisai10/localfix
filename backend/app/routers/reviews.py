@@ -38,14 +38,15 @@ def create_review(
         comment=payload.comment
     )
     db.add(review)
+    db.flush()
 
     # Dynamically recalculate provider average rating
     provider = db.query(Provider).filter(Provider.id == booking.provider_id).first()
     if provider:
         all_reviews = db.query(Review).filter(Review.provider_id == provider.id).all()
-        ratings = [r.rating for r in all_reviews] + [payload.rating]
-        provider.rating = round(sum(ratings) / len(ratings), 2)
-        provider.review_count = len(ratings)
+        if all_reviews:
+            provider.rating = round(sum(r.rating for r in all_reviews) / len(all_reviews), 2)
+            provider.review_count = len(all_reviews)
 
         prov_user = db.query(User).filter(User.id == provider.user_id).first()
         if prov_user:

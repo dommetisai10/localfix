@@ -20,6 +20,12 @@ def submit_complaint(
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
 
+    if booking.customer_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only submit complaints for your own bookings."
+        )
+
     ref = f"CMP-{uuid.uuid4().hex[:6].upper()}"
     complaint = Complaint(
         complaint_reference=ref,

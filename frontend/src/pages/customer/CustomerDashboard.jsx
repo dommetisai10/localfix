@@ -2,25 +2,37 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Clock, CheckCircle2, XCircle, Sparkles, ArrowRight, ShieldCheck, CheckSquare } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { DEFAULT_CATEGORIES } from '../../utils/mockData';
 import { fetchCustomerBookings } from '../../utils/bookingStorage';
+import { getServices } from '../../services/servicesApi';
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
   const [bookings, setBookings] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
-    const loadBookings = async () => {
+    const loadDashboardData = async () => {
       setLoading(true);
-      const data = await fetchCustomerBookings(user?.id);
-      if (isMounted) {
-        setBookings(data);
-        setLoading(false);
+      try {
+        const [bData, cData] = await Promise.all([
+          fetchCustomerBookings(),
+          getServices().catch(() => [])
+        ]);
+        if (isMounted) {
+          setBookings(bData || []);
+          setCategories(cData || []);
+        }
+      } catch (err) {
+        console.error("Failed to load customer dashboard data", err);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
-    loadBookings();
+    loadDashboardData();
     return () => { isMounted = false; };
   }, [user?.id]);
 
@@ -32,7 +44,7 @@ export default function CustomerDashboard() {
     { label: "Cancelled", value: bookings.filter(b => b.status === "CANCELLED").length, icon: XCircle, color: "text-rose-400", bg: "bg-rose-500/10" },
   ];
 
-  const recommendedServices = DEFAULT_CATEGORIES.slice(2, 6);
+  const recommendedServices = categories.slice(0, 4);
 
   return (
     <div className="space-y-8">

@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Wrench, Sparkles, ShieldCheck, Mail, Lock, User, Phone, MapPin, IndianRupee, Clock, AlertCircle } from 'lucide-react';
-import { DEFAULT_CATEGORIES } from '../utils/mockData';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import api from '../services/api';
+import { getServices } from '../services/servicesApi';
 
 export default function ProviderRegisterPage() {
   const [fullName, setFullName] = useState('');
@@ -14,6 +14,7 @@ export default function ProviderRegisterPage() {
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [category, setCategory] = useState('Electrician');
+  const [categories, setCategories] = useState([]);
   const [experience, setExperience] = useState('5');
   const [price, setPrice] = useState('450');
   const [description, setDescription] = useState('');
@@ -25,6 +26,23 @@ export default function ProviderRegisterPage() {
   const { login } = useAuth();
   const { addNotification } = useNotification();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchCat = async () => {
+      try {
+        const data = await getServices();
+        if (isMounted && data && data.length > 0) {
+          setCategories(data);
+          setCategory(data[0].name);
+        }
+      } catch (err) {
+        console.error("Failed to fetch service categories", err);
+      }
+    };
+    fetchCat();
+    return () => { isMounted = false; };
+  }, []);
 
   // AI Feature 3: Generate Professional Description
   const handleGenerateAiDescription = async () => {
@@ -43,13 +61,9 @@ export default function ProviderRegisterPage() {
         addNotification("AI Generated Description!", "Your professional bio has been crafted by Gemini AI.", "success");
       }
     } catch (err) {
-      // Fallback description generator
-      setTimeout(() => {
-        const generated = `Certified ${category} technician with over ${experience} years of dedicated field experience in ${city || 'the metropolitan area'}. Specialist in precision troubleshooting, modern installations, and emergency maintenance. Committed to 100% safety standards, clean work, and transparent pricing.`;
-        setDescription(generated);
-        addNotification("AI Generated Description!", "Your professional bio has been crafted by Gemini AI.", "success");
-        setGeneratingAi(false);
-      }, 600);
+      const generated = `Certified ${category} technician with over ${experience} years of dedicated field experience in ${city || 'the metropolitan area'}. Specialist in precision troubleshooting, modern installations, and emergency maintenance. Committed to 100% safety standards, clean work, and transparent pricing.`;
+      setDescription(generated);
+      addNotification("Description Generated (Offline Fallback)", "AI service is currently unavailable. A standard template has been generated for you.", "info");
     } finally {
       setGeneratingAi(false);
     }
@@ -190,11 +204,15 @@ export default function ProviderRegisterPage() {
                 onChange={(e) => setCategory(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-100 outline-none focus:border-sky-500/50"
               >
-                {DEFAULT_CATEGORIES.map((cat) => (
-                  <option key={cat.id} value={cat.name}>
-                    {cat.name}
-                  </option>
-                ))}
+                {categories.length > 0 ? (
+                  categories.map((cat) => (
+                    <option key={cat.id} value={cat.name}>
+                      {cat.name}
+                    </option>
+                  ))
+                ) : (
+                  <option value="Electrician">Electrician</option>
+                )}
               </select>
             </div>
 

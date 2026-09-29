@@ -61,6 +61,38 @@ def get_providers(
     return results
 
 
+@router.get("/me", response_model=ProviderOut)
+def get_current_provider_profile(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    p = db.query(Provider).filter(Provider.user_id == current_user.id).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Provider profile not found")
+
+    return ProviderOut(
+        id=p.id,
+        userId=p.user_id,
+        name=current_user.full_name,
+        email=current_user.email,
+        mobile=current_user.mobile_number,
+        avatar=p.avatar,
+        category=p.category or "General Service",
+        experienceYears=p.experience_years or 1,
+        hourlyRate=p.hourly_rate or 30.0,
+        city=p.city or "",
+        location=p.location or "",
+        rating=p.rating or 5.0,
+        reviewCount=p.review_count or 0,
+        completedBookings=p.completed_bookings or 0,
+        status=p.status,
+        description=p.description or "",
+        bio=p.bio or "",
+        availableDays=p.available_days or ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        workingHours=p.working_hours or "08:00 AM - 06:00 PM"
+    )
+
+
 @router.get("/{id}", response_model=ProviderOut)
 def get_provider_details(id: int, db: Session = Depends(get_db)):
     p = db.query(Provider).filter(Provider.id == id).first()

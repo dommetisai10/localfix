@@ -33,12 +33,14 @@ export default function LoginPage() {
     } catch (err) {
       if (!err.response) {
         addNotification(
-          "Server Waking Up / Unreachable",
-          "Connecting to backend. Render free tier takes 20-30 seconds to wake up on cold start. Please wait and try again.",
+          "Server Unreachable",
+          "Cannot reach server. It may be waking up (Render free tier can take 30-60s). Please retry.",
           "error"
         );
+      } else if (err.response.status === 401) {
+        addNotification("Login Failed", "Invalid email or password", "error");
       } else {
-        addNotification("Login Failed", err.response?.data?.detail || "Invalid email or password", "error");
+        addNotification("Login Failed", err.response?.data?.detail || "An unexpected error occurred", "error");
       }
     } finally {
       setLoading(false);

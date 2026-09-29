@@ -1,8 +1,12 @@
 import enum
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Text, Enum, JSON
 from sqlalchemy.orm import relationship
 from app.database import Base
+
+
+def utc_now():
+    return datetime.now(timezone.utc)
 
 
 class UserRole(str, enum.Enum):
@@ -46,8 +50,8 @@ class User(Base):
     role = Column(String(20), default=UserRole.CUSTOMER.value, nullable=False)
     location = Column(String(200), nullable=True)
     city = Column(String(100), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
     # Relationships
     provider_profile = relationship("Provider", back_populates="user", uselist=False, cascade="all, delete-orphan")
@@ -66,8 +70,8 @@ class ServiceCategory(Base):
     image = Column(String(500), nullable=True)
     active = Column(Boolean, default=True)
     count = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
     services = relationship("Service", back_populates="category")
     providers = relationship("Provider", back_populates="category_rel")
@@ -82,8 +86,8 @@ class Service(Base):
     description = Column(Text, nullable=True)
     base_price = Column(Float, default=0.0)
     active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
     category = relationship("ServiceCategory", back_populates="services")
     provider_associations = relationship("ProviderService", back_populates="service")
@@ -109,8 +113,8 @@ class Provider(Base):
     rating = Column(Float, default=5.0)
     review_count = Column(Integer, default=0)
     completed_bookings = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
     user = relationship("User", back_populates="provider_profile")
     category_rel = relationship("ServiceCategory", back_populates="providers")
@@ -159,8 +163,8 @@ class Booking(Base):
     description = Column(Text, nullable=True)
     price = Column(Float, nullable=False)
     status = Column(String(20), default=BookingStatus.PENDING.value, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
     customer = relationship("User", back_populates="customer_bookings", foreign_keys=[customer_id])
     provider = relationship("Provider", back_populates="bookings", foreign_keys=[provider_id])
@@ -177,7 +181,7 @@ class Review(Base):
     provider_id = Column(Integer, ForeignKey("providers.id"), nullable=False)
     rating = Column(Integer, nullable=False)
     comment = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
 
     booking = relationship("Booking", back_populates="reviews")
     customer = relationship("User", back_populates="reviews")
@@ -195,8 +199,8 @@ class Complaint(Base):
     description = Column(Text, nullable=False)
     status = Column(String(20), default=ComplaintStatus.OPEN.value, nullable=False)
     ai_summary = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
     booking = relationship("Booking", back_populates="complaints")
     customer = relationship("User", back_populates="complaints")
@@ -211,6 +215,6 @@ class Notification(Base):
     message = Column(Text, nullable=False)
     notification_type = Column(String(50), default="system")
     read = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
 
     user = relationship("User", back_populates="notifications")

@@ -1,6 +1,21 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const getApiBaseUrl = () => {
+  let url = import.meta.env.VITE_API_URL;
+  if (!url) {
+    if (import.meta.env.PROD) {
+      console.error("VITE_API_URL is not configured in production environment!");
+    }
+    url = 'http://localhost:8000/api';
+  }
+  url = url.trim().replace(/\/+$/, '');
+  if (!url.endsWith('/api')) {
+    url = `${url}/api`;
+  }
+  return url;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -41,3 +56,4 @@ api.interceptors.response.use(
 );
 
 export default api;
+

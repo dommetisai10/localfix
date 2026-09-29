@@ -4,7 +4,9 @@ import { Calendar, Clock, Star, AlertTriangle, XCircle, CheckCircle2, MessageSqu
 import StarRating from '../../components/StarRating';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
-import { fetchCustomerBookings } from '../../utils/bookingStorage';
+import { getMyBookings, updateBookingStatus } from '../../services/bookingsApi';
+import { createReview } from '../../services/reviewsApi';
+import { createComplaint } from '../../services/complaintsApi';
 
 export default function CustomerBookingsPage() {
   const { user } = useAuth();
@@ -12,18 +14,21 @@ export default function CustomerBookingsPage() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const data = await getMyBookings();
+      setBookings(data || []);
+    } catch (err) {
+      console.error("Failed to load customer bookings", err);
+      addNotification("Error", err.response?.data?.detail || "Could not load bookings", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    let isMounted = true;
-    const loadData = async () => {
-      setLoading(true);
-      const data = await fetchCustomerBookings(user?.id);
-      if (isMounted) {
-        setBookings(data);
-        setLoading(false);
-      }
-    };
     loadData();
-    return () => { isMounted = false; };
   }, [user?.id]);
 
   // Review Modal State
@@ -31,45 +36,85 @@ export default function CustomerBookingsPage() {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [rating, setRating] = useState(5);
   const [reviewText, setReviewText] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   // Complaint Modal State
   const [complaintModalOpen, setComplaintModalOpen] = useState(false);
   const [complaintType, setComplaintType] = useState('Service Quality');
   const [complaintText, setComplaintText] = useState('');
+  const [submittingComplaint, setSubmittingComplaint] = useState(false);
 
-  const handleCancelBooking = (bookingId) => {
-    setBookings(prev => {
-      const updated = prev.map(b => b.id === bookingId ? { ...b, status: 'CANCELLED' } : b);
-      if (user?.id) {
-        localStorage.setItem(`localfix_bookings_${user.id}`, JSON.stringify(updated));
-      }
-      return updated;
-    });
-    addNotification("Booking Cancelled", `Booking ${bookingId} has been cancelled.`, "info");
+  const handleCancelBooking = async (bookingId) => {
+    try {
+      await updateBookingStatus(bookingId, 'CANCELLED');
+      setBookings(prev =>
+        prev.map(b => b.id === bookingId ? { ...b, status: 'CANCELLED' } : b)
+      );
+      addNotification("Booking Cancelled", `Booking #${bookingId} status updated to CANCELLED.`, "info");
+    } catch (err) {
+      const msg = err.response?.data?.detail || "Could not cancel booking";
+      addNotification("Cancellation Failed", msg, "error");
+    }
   };
 
-  const handleReviewSubmit = (e) => {
+  const handleReviewSubmit = async (e) => {
     e.preventDefault();
     if (!selectedBooking) return;
 
-    setBookings(prev => {
-      const updated = prev.map(b => b.id === selectedBooking.id ? { ...b, hasReviewed: true } : b);
-      if (user?.id) {
-        localStorage.setItem(`localfix_bookings_${user.id}`, JSON.stringify(updated));
-      }
-      return updated;
-    });
-    setReviewModalOpen(false);
-    addNotification("Review Submitted!", "Thank you for rating your service provider.", "success");
+    setSubmittingReview(true);
+    try {
+      await createReview({
+        booking_id: selectedBooking.id,
+        rating: Number(rating),
+        comment: reviewText
+      });
+      setBookings(prev =>
+        prev.map(b => b.id === selectedBooking.id ? { ...b, hasReviewed: true } : b)
+      );
+      setReviewModalOpen(false);
+      setReviewText('');
+      addNotification("Review Submitted!", "Thank you for rating your service provider.", "success");
+    } catch (err) {
+      const msg = err.response?.data?.detail || "Could not submit review";
+      addNotification("Review Failed", msg, "error");
+    } finally {
+      setSubmittingReview(false);
+    }
   };
 
-  const handleComplaintSubmit = (e) => {
+  const handleComplaintSubmit = async (e) => {
     e.preventDefault();
     if (!selectedBooking) return;
 
-    setComplaintModalOpen(false);
-    addNotification("Complaint Submitted", `Your complaint for booking ${selectedBooking.id} has been logged with status OPEN.`, "info");
+    setSubmittingComplaint(true);
+    try {
+      const res = await createComplaint({
+        booking_id: selectedBooking.id,
+        complaint_type: complaintType,
+        description: complaintText
+      });
+      setComplaintModalOpen(false);
+      setComplaintText('');
+      addNotification(
+        "Complaint Submitted",
+        `Complaint logged successfully. Reference Code: ${res.complaint_reference || res.id}`,
+        "success"
+      );
+    } catch (err) {
+      const msg = err.response?.data?.detail || "Could not submit complaint";
+      addNotification("Complaint Failed", msg, "error");
+    } finally {
+      setSubmittingComplaint(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-sky-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -85,9 +130,9 @@ export default function CustomerBookingsPage() {
           <div key={booking.id} className="glass-card p-6 rounded-2xl border border-slate-800 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
               <div>
-                <span className="text-[10px] font-bold text-sky-400 uppercase tracking-widest">{booking.id}</span>
-                <h3 className="text-base font-bold text-slate-100">{booking.providerName}</h3>
-                <p className="text-xs text-slate-400">{booking.category}</p>
+                <span className="text-[10px] font-bold text-sky-400 uppercase tracking-widest">{booking.booking_reference || booking.id}</span>
+                <h3 className="text-base font-bold text-slate-100">{booking.provider_name || booking.providerName}</h3>
+                <p className="text-xs text-slate-400">{booking.category_name || booking.category}</p>
               </div>
 
               <div className="flex items-center gap-3">
@@ -125,7 +170,7 @@ export default function CustomerBookingsPage() {
                 </button>
               )}
 
-              {booking.status !== 'CANCELLED' && booking.status !== 'COMPLETED' && (
+              {(booking.status === 'PENDING' || booking.status === 'ACCEPTED') && (
                 <button
                   onClick={() => handleCancelBooking(booking.id)}
                   className="px-4 py-2 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/30 text-xs font-bold hover:bg-rose-500/20 flex items-center gap-1.5"
@@ -194,9 +239,10 @@ export default function CustomerBookingsPage() {
 
               <button
                 type="submit"
+                disabled={submittingReview}
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-extrabold text-xs shadow-lg"
               >
-                Submit Rating & Review
+                {submittingReview ? 'Submitting...' : 'Submit Rating & Review'}
               </button>
             </form>
           </div>
@@ -241,9 +287,10 @@ export default function CustomerBookingsPage() {
 
               <button
                 type="submit"
+                disabled={submittingComplaint}
                 className="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs shadow-lg"
               >
-                Submit Official Complaint (OPEN)
+                {submittingComplaint ? 'Submitting...' : 'Submit Official Complaint (OPEN)'}
               </button>
             </form>
           </div>

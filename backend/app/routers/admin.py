@@ -180,3 +180,47 @@ def get_admin_complaints(db: Session = Depends(get_db), admin=Depends(get_curren
             created_at=c.created_at
         ) for c in complaints
     ]
+
+
+@router.put("/complaints/{id}/summary", response_model=ComplaintOut)
+def update_complaint_summary(
+    id: int,
+    payload: Dict[str, Any],
+    db: Session = Depends(get_db),
+    admin=Depends(get_current_admin)
+):
+    c = db.query(Complaint).filter(Complaint.id == id).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+
+    if "ai_summary" in payload:
+        c.ai_summary = payload["ai_summary"]
+
+    db.commit()
+    db.refresh(c)
+    return ComplaintOut(
+        id=c.id,
+        complaint_reference=c.complaint_reference,
+        booking_id=c.booking_id,
+        customer_id=c.customer_id,
+        complaint_type=c.complaint_type,
+        description=c.description,
+        status=c.status,
+        ai_summary=c.ai_summary,
+        created_at=c.created_at
+    )
+
+
+@router.get("/analytics")
+def get_admin_analytics(db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    completed = db.query(Booking).filter(Booking.status == BookingStatus.COMPLETED.value).all()
+    monthly_data = {}
+    for b in completed:
+        month_str = b.created_at.strftime("%b %Y") if b.created_at else "Unknown"
+        if month_str not in monthly_data:
+            monthly_data[month_str] = {"month": month_str, "bookings": 0, "revenue": 0.0}
+        monthly_data[month_str]["bookings"] += 1
+        monthly_data[month_str]["revenue"] += b.price
+
+    return list(monthly_data.values())
+

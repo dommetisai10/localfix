@@ -1,15 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useOutletContext } from 'react-router-dom';
 import { Search, MapPin, Sparkles, ShieldCheck, Clock, Award, Star, ArrowRight, CheckCircle2, UserCheck, Wrench, ThumbsUp } from 'lucide-react';
-import { DEFAULT_CATEGORIES, INITIAL_PROVIDERS, INITIAL_REVIEWS } from '../utils/mockData';
 import ServiceCard from '../components/ServiceCard';
 import ProviderCard from '../components/ProviderCard';
+import { getServices } from '../services/servicesApi';
+import { getProviders } from '../services/providersApi';
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [locationQuery, setLocationQuery] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [providers, setProviders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   const navigate = useNavigate();
   const context = useOutletContext();
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadHomeData = async () => {
+      setLoading(true);
+      try {
+        const [catData, provData] = await Promise.all([
+          getServices().catch(() => []),
+          getProviders().catch(() => [])
+        ]);
+        if (isMounted) {
+          setCategories(catData || []);
+          setProviders(provData || []);
+        }
+      } catch (err) {
+        console.error("Failed to load home data", err);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+    loadHomeData();
+    return () => { isMounted = false; };
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -19,8 +49,8 @@ export default function Home() {
     navigate(`/providers?${params.toString()}`);
   };
 
-  const featuredCategories = DEFAULT_CATEGORIES.slice(0, 8);
-  const featuredProviders = INITIAL_PROVIDERS.slice(0, 3);
+  const featuredCategories = categories.slice(0, 8);
+  const featuredProviders = providers.slice(0, 3);
 
   return (
     <div className="relative min-h-screen pb-20">
@@ -57,7 +87,7 @@ export default function Home() {
           </h1>
 
           <p className="text-slate-300 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-            Find reliable professionals near you in Ravulapalem and book quality home services with upfront pricing and verified customer reviews.
+            Find reliable professionals near you and book quality home services with upfront pricing and verified customer reviews.
           </p>
 
           {/* Search Bar Form */}
@@ -128,15 +158,25 @@ export default function Home() {
             to="/services"
             className="inline-flex items-center gap-2 text-sm font-semibold text-sky-400 hover:text-sky-300"
           >
-            View All 15 Categories <ArrowRight className="w-4 h-4" />
+            View All Categories <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featuredCategories.map((category) => (
-            <ServiceCard key={category.id} service={category} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-sky-500 mx-auto"></div>
+          </div>
+        ) : featuredCategories.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {featuredCategories.map((category) => (
+              <ServiceCard key={category.id} service={category} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 text-slate-400 text-sm">
+            No service categories currently available.
+          </div>
+        )}
       </section>
 
       {/* HOW IT WORKS */}
@@ -204,7 +244,11 @@ export default function Home() {
           </Link>
         </div>
 
-        {featuredProviders.length > 0 ? (
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-sky-500 mx-auto"></div>
+          </div>
+        ) : featuredProviders.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {featuredProviders.map((provider) => (
               <ProviderCard key={provider.id} provider={provider} />
@@ -215,11 +259,11 @@ export default function Home() {
             <UserCheck className="w-12 h-12 text-sky-400 mx-auto opacity-70" />
             <h3 className="text-lg font-bold text-slate-200">No Service Providers Listed Yet</h3>
             <p className="text-slate-400 text-sm max-w-md mx-auto">
-              Are you a skilled professional in Ravulapalem or nearby regions? Register your service business today and reach local customers!
+              Are you a skilled professional in your region? Register your service business today and reach local customers!
             </p>
             <div className="pt-2">
               <Link
-                to="/provider/register"
+                to="/provider-register"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-500 text-white font-semibold text-sm hover:bg-sky-400 transition shadow-lg shadow-sky-500/20"
               >
                 Become a Provider <ArrowRight className="w-4 h-4" />
@@ -282,58 +326,8 @@ export default function Home() {
                 alt="LocalFix Technician at work"
                 className="rounded-2xl border border-slate-700/60 shadow-2xl object-cover h-80 w-full"
               />
-              <div className="absolute -bottom-6 -left-6 glass-card p-4 rounded-2xl border border-sky-500/30 flex items-center gap-4 shadow-2xl">
-                <div className="p-3 bg-sky-500/20 text-sky-400 rounded-xl">
-                  <Award className="w-6 h-6" />
-                </div>
-                <div>
-                  <div className="text-lg font-bold text-slate-100">4.9 / 5.0 Rating</div>
-                  <div className="text-xs text-slate-400">From over 12,000+ completed local bookings</div>
-                </div>
-              </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* CUSTOMER REVIEWS */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-100">
-            What Our Customers Say
-          </h2>
-          <p className="text-slate-400 text-sm mt-1">
-            Real feedback from satisfied homeowners and business owners
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {INITIAL_REVIEWS.map((rev) => (
-            <div key={rev.id} className="glass-card p-6 rounded-2xl border border-slate-800 flex flex-col justify-between">
-              <div className="space-y-3">
-                <div className="flex items-center gap-1 text-amber-400">
-                  {Array.from({ length: rev.rating }).map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-amber-400" />
-                  ))}
-                </div>
-                <p className="text-xs text-slate-300 leading-relaxed italic">
-                  "{rev.comment}"
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3 pt-4 border-t border-slate-800 mt-4">
-                <img
-                  src={rev.customerAvatar}
-                  alt={rev.customerName}
-                  className="w-10 h-10 rounded-full object-cover border border-sky-500/30"
-                />
-                <div>
-                  <h4 className="text-xs font-bold text-slate-100">{rev.customerName}</h4>
-                  <span className="text-[10px] text-slate-500">{rev.createdAt}</span>
-                </div>
-              </div>
-            </div>
-          ))}
         </div>
       </section>
 

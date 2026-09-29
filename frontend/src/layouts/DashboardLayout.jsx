@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, Link, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { Wrench, LayoutDashboard, Calendar, Star, AlertTriangle, Users, Briefcase, Bell, LogOut, ChevronRight, Menu, X, Bot, Shield, IndianRupee } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
@@ -24,14 +24,31 @@ export default function DashboardLayout() {
   }
 
   // Role guarding
+  if (!user) {
+    if (location.pathname.startsWith('/admin')) {
+      return <Navigate to="/admin/login" replace />;
+    }
+    return <Navigate to="/login" replace />;
+  }
+
+  // Logged-in user role routing check:
+  // /admin requires ADMIN
+  // /provider requires PROVIDER or ADMIN
+  // /customer requires CUSTOMER or ADMIN
+  const getUserDashboardPath = (role) => {
+    if (role === 'ADMIN') return '/admin/dashboard';
+    if (role === 'PROVIDER') return '/provider/dashboard';
+    return '/customer/dashboard';
+  };
+
   if (location.pathname.startsWith('/admin') && !isAdmin) {
-    return <Navigate to="/admin/login" replace />;
+    return <Navigate to={getUserDashboardPath(user.role)} replace />;
   }
   if (location.pathname.startsWith('/provider') && !isProvider && !isAdmin) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={getUserDashboardPath(user.role)} replace />;
   }
-  if (location.pathname.startsWith('/customer') && !user) {
-    return <Navigate to="/login" replace />;
+  if (location.pathname.startsWith('/customer') && !isCustomer && !isAdmin) {
+    return <Navigate to={getUserDashboardPath(user.role)} replace />;
   }
 
   const handleLogout = () => {

@@ -1,14 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter, Wrench } from 'lucide-react';
-import { DEFAULT_CATEGORIES } from '../utils/mockData';
 import ServiceCard from '../components/ServiceCard';
+import { getServices } from '../services/servicesApi';
 
 export default function ServicesPage() {
   const [query, setQuery] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredCategories = DEFAULT_CATEGORIES.filter((cat) =>
+  useEffect(() => {
+    let isMounted = true;
+    const fetchCategories = async () => {
+      setLoading(true);
+      try {
+        const data = await getServices();
+        if (isMounted) {
+          setCategories(data || []);
+        }
+      } catch (err) {
+        console.error("Failed to load service categories", err);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+    fetchCategories();
+    return () => { isMounted = false; };
+  }, []);
+
+  const filteredCategories = categories.filter((cat) =>
     cat.name.toLowerCase().includes(query.toLowerCase()) ||
-    cat.description.toLowerCase().includes(query.toLowerCase())
+    (cat.description && cat.description.toLowerCase().includes(query.toLowerCase()))
   );
 
   return (
@@ -17,7 +40,7 @@ export default function ServicesPage() {
       {/* Page Header */}
       <div className="text-center max-w-3xl mx-auto space-y-4">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-400 text-xs font-bold uppercase tracking-wider">
-          <Wrench className="w-3.5 h-3.5" /> All 15 Service Categories
+          <Wrench className="w-3.5 h-3.5" /> Service Categories ({categories.length})
         </div>
         <h1 className="text-3xl sm:text-5xl font-extrabold text-slate-100">
           Find the Right <span className="text-sky-400">Service</span> for Your Home
@@ -42,7 +65,11 @@ export default function ServicesPage() {
       </div>
 
       {/* Grid of Categories */}
-      {filteredCategories.length === 0 ? (
+      {loading ? (
+        <div className="text-center py-16">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-sky-500 mx-auto"></div>
+        </div>
+      ) : filteredCategories.length === 0 ? (
         <div className="text-center py-16 text-slate-400 space-y-2">
           <p className="text-base font-semibold">No service category matching "{query}"</p>
           <p className="text-xs">Try searching for electrician, plumber, AC repair, cleaning, or tutor.</p>

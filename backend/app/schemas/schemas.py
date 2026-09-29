@@ -54,6 +54,20 @@ class Token(BaseModel):
 
 
 # Service Schemas
+class CategoryCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    image: Optional[str] = None
+    active: Optional[bool] = True
+
+
+class CategoryUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    image: Optional[str] = None
+    active: Optional[bool] = None
+
+
 class CategoryOut(BaseModel):
     id: int
     name: str

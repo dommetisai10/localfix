@@ -111,6 +111,9 @@ cp .env.example .env
 
 # Run FastAPI backend server (Port 8000)
 uvicorn app.main:app --reload --port 8000
+
+# Run Pytest suite
+python -m pytest
 ```
 - **Interactive Swagger Docs**: `http://localhost:8000/docs`
 - **ReDoc**: `http://localhost:8000/redoc`
@@ -126,17 +129,33 @@ npm install
 # Create .env file
 cp .env.example .env
 
+# Run ESLint validation
+npm run lint
+
 # Run Vite development server (Port 3000)
 npm run dev
+
+# Build for production
+npm run build
 ```
 - Open `http://localhost:3000` in your browser.
 
 ---
 
-## 🔑 Credentials
+## 🔑 Environment Variables & Configuration
 
-- **Admin Account**: `dommetisai@localfix.com` / `Dommetisai`
-- **Customer Account**: `customer@example.com` / `password123`
+### Backend (.env)
+- `ENVIRONMENT`: `development` or `production`
+- `DATABASE_URL`: PostgreSQL connection string (`postgresql://user:pass@host/db`) or SQLite in dev (`sqlite:///./localfix.db`)
+- `JWT_SECRET`: Random 32+ character secret key for JWT signing
+- `JWT_ALGORITHM`: `HS256`
+- `ADMIN_EMAIL`: Email address for admin login (e.g. `admin@localfix.com`)
+- `ADMIN_PASSWORD`: Secure password for initial admin creation
+- `CORS_ORIGINS`: Allowed origins separated by commas (e.g. `https://your-app.vercel.app`)
+- `GEMINI_API_KEY`: Google Gemini API key
+
+### Frontend (.env)
+- `VITE_API_URL`: Backend API URL ending with `/api` (e.g. `https://your-app.onrender.com/api`)
 
 ---
 
@@ -146,17 +165,22 @@ npm run dev
 1. Push repository to **GitHub**.
 2. Log into **Render** and create a new **Web Service**.
 3. Select your repository and choose environment **Python**.
-4. Set Build Command: `pip install -r requirements.txt`
-5. Set Start Command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-6. Set Environment Variables:
+4. Set `PYTHON_VERSION` to `3.11.9`.
+5. Set Build Command: `pip install -r requirements.txt`
+6. Set Start Command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+7. Set Environment Variables:
+   - `ENVIRONMENT`: `production`
    - `DATABASE_URL`: `postgresql://<user>:<pass>@<host>/<db>`
    - `JWT_SECRET`: `<your-random-secret-key>`
+   - `ADMIN_EMAIL`: `<admin-email>`
+   - `ADMIN_PASSWORD`: `<secure-admin-password>`
    - `GEMINI_API_KEY`: `<your-google-gemini-key>`
    - `CORS_ORIGINS`: `https://your-frontend.vercel.app`
 
 ### Frontend → Vercel
 1. Log into **Vercel** and click **Import Project**.
-2. Select the `frontend` folder.
-3. Environment Variable:
+2. Select the `frontend` directory.
+3. Set Environment Variable:
    - `VITE_API_URL`: `https://your-backend.onrender.com/api`
-4. Click **Deploy**.
+4. Trigger a new deployment (Vite bakes env vars into static JS at build time).
+5. Verify setup: Visit `/api/health` on Render backend, `/docs`, and test login on Vercel.

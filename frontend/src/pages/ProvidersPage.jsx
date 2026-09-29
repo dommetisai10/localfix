@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Search, MapPin, Filter, Star, IndianRupee, Briefcase } from 'lucide-react';
-import { INITIAL_PROVIDERS, DEFAULT_CATEGORIES } from '../utils/mockData';
 import ProviderCard from '../components/ProviderCard';
+import { getProviders } from '../services/providersApi';
+import { getServices } from '../services/servicesApi';
 
 export default function ProvidersPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -15,25 +16,45 @@ export default function ProvidersPage() {
   const [minRating, setMinRating] = useState(0);
   const [maxPrice, setMaxPrice] = useState(1000);
 
+  const [providers, setProviders] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     if (searchParams.get('service')) {
       setSelectedCategory(searchParams.get('service'));
     }
   }, [searchParams]);
 
-  const filteredProviders = INITIAL_PROVIDERS.filter((provider) => {
-    const matchesCategory = selectedCategory
-      ? provider.category.toLowerCase() === selectedCategory.toLowerCase()
-      : true;
-    const matchesLocation = locationQuery
-      ? provider.location.toLowerCase().includes(locationQuery.toLowerCase()) ||
-        provider.city.toLowerCase().includes(locationQuery.toLowerCase())
-      : true;
-    const matchesRating = provider.rating >= minRating;
-    const matchesPrice = provider.hourlyRate <= maxPrice;
-
-    return matchesCategory && matchesLocation && matchesRating && matchesPrice;
-  });
+  useEffect(() => {
+    let isMounted = true;
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        const [provRes, catRes] = await Promise.all([
+          getProviders({
+            category: selectedCategory || undefined,
+            location: locationQuery || undefined,
+            min_rating: minRating > 0 ? minRating : undefined,
+            max_price: maxPrice < 1000 ? maxPrice : undefined
+          }).catch(() => []),
+          getServices().catch(() => [])
+        ]);
+        if (isMounted) {
+          setProviders(provRes || []);
+          setCategories(catRes || []);
+        }
+      } catch (err) {
+        console.error("Failed to load providers page data", err);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+    loadData();
+    return () => { isMounted = false; };
+  }, [selectedCategory, locationQuery, minRating, maxPrice]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
@@ -63,7 +84,7 @@ export default function ProvidersPage() {
               className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-100 focus:border-sky-500/50 outline-none"
             >
               <option value="">All Categories</option>
-              {DEFAULT_CATEGORIES.map((cat) => (
+              {categories.map((cat) => (
                 <option key={cat.id} value={cat.name}>
                   {cat.name}
                 </option>
@@ -143,10 +164,14 @@ export default function ProvidersPage() {
       {/* Provider Results Grid */}
       <div>
         <div className="flex items-center justify-between mb-4 text-xs text-slate-400">
-          <span>Showing <strong className="text-slate-100">{filteredProviders.length}</strong> available professionals</span>
+          <span>Showing <strong className="text-slate-100">{providers.length}</strong> available professionals</span>
         </div>
 
-        {filteredProviders.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-20">
+            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-sky-500 mx-auto"></div>
+          </div>
+        ) : providers.length === 0 ? (
           <div className="text-center py-20 bg-slate-900/60 rounded-3xl border border-slate-800 space-y-4 max-w-2xl mx-auto px-4 shadow-xl">
             <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-400 border border-sky-500/20 flex items-center justify-center mx-auto">
               <Briefcase className="w-6 h-6" />
@@ -166,7 +191,7 @@ export default function ProvidersPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProviders.map((provider) => (
+            {providers.map((provider) => (
               <ProviderCard key={provider.id} provider={provider} />
             ))}
           </div>
