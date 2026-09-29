@@ -6,8 +6,8 @@ import { useNotification } from '../context/NotificationContext';
 import api from '../services/api';
 
 export default function AdminLoginPage() {
-  const [email, setEmail] = useState('dommetisai@localfix.com');
-  const [password, setPassword] = useState('Dommetisai');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const { login } = useAuth();
@@ -18,26 +18,17 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setLoading(true);
 
-    const adminUser = {
-      id: 1,
-      name: 'Dommetisai Admin',
-      email: 'dommetisai@localfix.com',
-      role: 'ADMIN'
-    };
-
     try {
       const res = await api.post('/auth/login', { email, password });
-      login(res.data.user || adminUser, res.data.access_token || "admin_jwt_token");
+      if (res.data.user?.role !== 'ADMIN') {
+        addNotification("Access Denied", "This portal is restricted to Administrators only.", "error");
+        return;
+      }
+      login(res.data.user, res.data.access_token);
       addNotification("Admin Access Granted", "Welcome to Admin Management Portal", "success");
       navigate('/admin/dashboard');
     } catch (err) {
-      if (email === 'dommetisai@localfix.com' && password === 'Dommetisai') {
-        login(adminUser, "admin_jwt_token_demo");
-        addNotification("Admin Access Granted", "Welcome to Admin Portal", "success");
-        navigate('/admin/dashboard');
-      } else {
-        addNotification("Login Failed", err.response?.data?.detail || "Invalid admin credentials", "error");
-      }
+      addNotification("Login Failed", err.response?.data?.detail || "Invalid admin credentials", "error");
     } finally {
       setLoading(false);
     }

@@ -22,7 +22,6 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // Try backend authentication endpoint
       const res = await api.post('/auth/login', { email, password });
       login(res.data.user, res.data.access_token);
       addNotification("Login Successful!", `Welcome back, ${res.data.user.name}`, "success");
@@ -32,34 +31,9 @@ export default function LoginPage() {
       else if (role === 'PROVIDER') navigate('/provider/dashboard');
       else navigate('/customer/dashboard');
     } catch (err) {
-      // Demo fallback login if backend is not yet started
-      let mockUser = {
-        id: 1,
-        name: email.split('@')[0],
-        email: email,
-        role: email.includes('admin') ? 'ADMIN' : email.includes('provider') ? 'PROVIDER' : 'CUSTOMER',
-        location: 'Downtown Metro'
-      };
-
-      const mockToken = "mock_jwt_token_localfix_2026_" + Date.now();
-      login(mockUser, mockToken);
-      addNotification("Login Successful (Demo)", `Welcome back, ${mockUser.name}`, "success");
-
-      if (mockUser.role === 'ADMIN') navigate('/admin/dashboard');
-      else if (mockUser.role === 'PROVIDER') navigate('/provider/dashboard');
-      else navigate('/customer/dashboard');
+      addNotification("Login Failed", err.response?.data?.detail || "Invalid email or password", "error");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const autofillDemo = (role) => {
-    if (role === 'CUSTOMER') {
-      setEmail('customer@example.com');
-      setPassword('password123');
-    } else if (role === 'ADMIN') {
-      setEmail('dommetisai@localfix.com');
-      setPassword('Dommetisai');
     }
   };
 
@@ -72,27 +46,6 @@ export default function LoginPage() {
           </div>
           <h1 className="text-2xl font-extrabold text-slate-100">Welcome to LocalFix</h1>
           <p className="text-xs text-slate-400">Sign in to manage your bookings and service dashboard</p>
-        </div>
-
-        {/* Quick Login Options */}
-        <div className="bg-slate-900/80 p-3 rounded-2xl border border-slate-800 space-y-2">
-          <span className="text-[11px] font-bold text-sky-400 block text-center">Quick Account Autofill:</span>
-          <div className="grid grid-cols-2 gap-2 text-[10px] font-bold">
-            <button
-              type="button"
-              onClick={() => autofillDemo('CUSTOMER')}
-              className="py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200"
-            >
-              Customer Account
-            </button>
-            <button
-              type="button"
-              onClick={() => autofillDemo('ADMIN')}
-              className="py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200"
-            >
-              Admin Account
-            </button>
-          </div>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4 text-xs">
