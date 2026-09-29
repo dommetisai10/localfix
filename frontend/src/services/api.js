@@ -4,9 +4,10 @@ const getApiBaseUrl = () => {
   let url = import.meta.env.VITE_API_URL;
   if (!url) {
     if (import.meta.env.PROD) {
-      console.error("VITE_API_URL is not configured in production environment!");
+      url = 'https://localfix-backend-bg7d.onrender.com/api';
+    } else {
+      url = 'http://localhost:8000/api';
     }
-    url = 'http://localhost:8000/api';
   }
   url = url.trim().replace(/\/+$/, '');
   if (!url.endsWith('/api')) {
