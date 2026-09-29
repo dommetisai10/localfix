@@ -8,9 +8,11 @@ load_dotenv()
 # PostgreSQL default for local development per requirement
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/localfix")
 
-# Render / Heroku compatibility for postgres:// vs postgresql://
+# Render / Heroku compatibility: Ensure postgresql+psycopg2:// scheme is used for psycopg2-binary
 if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+elif DATABASE_URL.startswith("postgresql://") and not DATABASE_URL.startswith("postgresql+"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 connect_args = {}
 if DATABASE_URL.startswith("sqlite"):
