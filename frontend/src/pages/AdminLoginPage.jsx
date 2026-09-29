@@ -28,7 +28,15 @@ export default function AdminLoginPage() {
       addNotification("Admin Access Granted", "Welcome to Admin Management Portal", "success");
       navigate('/admin/dashboard');
     } catch (err) {
-      addNotification("Login Failed", err.response?.data?.detail || "Invalid admin credentials", "error");
+      if (!err.response) {
+        addNotification(
+          "Server Waking Up / Unreachable",
+          "Connecting to backend. Render free tier takes 20-30 seconds to wake up on cold start. Please wait and try again.",
+          "error"
+        );
+      } else {
+        addNotification("Login Failed", err.response?.data?.detail || "Invalid admin credentials", "error");
+      }
     } finally {
       setLoading(false);
     }

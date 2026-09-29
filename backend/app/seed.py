@@ -1,3 +1,4 @@
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.models.models import User, ServiceCategory, Provider, Booking, Review, UserRole, ProviderStatus, BookingStatus
 from app.utils.security import hash_password
@@ -110,7 +111,7 @@ def seed_database(db: Session):
         db.commit()
 
     # 2. Seed Admin user
-    admin = db.query(User).filter(User.email == "dommetisai@localfix.com").first()
+    admin = db.query(User).filter(func.lower(User.email) == "dommetisai@localfix.com").first()
     if not admin:
         admin = User(
             full_name="Dommetisai Admin",
@@ -127,7 +128,7 @@ def seed_database(db: Session):
         admin.role = UserRole.ADMIN.value
 
     # Also seed standard admin account for backup admin login
-    admin_backup = db.query(User).filter(User.email == "admin@localfix.com").first()
+    admin_backup = db.query(User).filter(func.lower(User.email) == "admin@localfix.com").first()
     if not admin_backup:
         admin_backup = User(
             full_name="System Administrator",
@@ -144,7 +145,7 @@ def seed_database(db: Session):
         admin_backup.role = UserRole.ADMIN.value
 
     # 3. Seed Sample Customer if missing
-    customer = db.query(User).filter(User.email == "customer@example.com").first()
+    customer = db.query(User).filter(func.lower(User.email) == "customer@example.com").first()
     if not customer:
         customer = User(
             full_name="Sarah Jenkins",
