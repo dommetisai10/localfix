@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Shield, Lock, Mail } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Shield, Lock, Mail, Wrench, ArrowLeft, KeyRound } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import api from '../services/api';
@@ -34,54 +34,106 @@ export default function AdminLoginPage() {
     }
   };
 
+  const handleFillCredentials = () => {
+    setEmail('dommetisai@localfix.com');
+    setPassword('Dommetisai');
+  };
+
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
-      <div className="glass-panel p-8 rounded-3xl border border-sky-500/30 max-w-md w-full space-y-6 shadow-2xl">
-        <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl bg-sky-500/20 text-sky-400 border border-sky-500/40 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-sky-500/20">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center relative overflow-hidden p-4">
+      {/* Background Ambient Glows */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-sky-500/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Top Navigation */}
+      <div className="absolute top-6 left-6">
+        <Link
+          to="/"
+          className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-sky-400 transition-colors bg-slate-900/60 border border-slate-800 px-3.5 py-2 rounded-xl backdrop-blur-md"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to LocalFix</span>
+        </Link>
+      </div>
+
+      <div className="w-full max-w-md space-y-6 relative z-10 my-auto">
+        {/* Brand Header */}
+        <div className="text-center space-y-3">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-500 via-blue-600 to-indigo-600 text-white flex items-center justify-center mx-auto shadow-xl shadow-sky-500/20 border border-sky-400/30">
             <Shield className="w-7 h-7" />
           </div>
-          <h1 className="text-2xl font-extrabold text-slate-100">Admin Portal Login</h1>
-          <p className="text-xs text-sky-400 font-semibold">Restricted Control Panel Access</p>
+          <div>
+            <h1 className="text-2xl font-black bg-gradient-to-r from-white via-slate-100 to-sky-400 bg-clip-text text-transparent">
+              Admin Control Portal
+            </h1>
+            <p className="text-xs text-sky-400 font-semibold tracking-wide uppercase mt-1">
+              LocalFix Management Console
+            </p>
+          </div>
         </div>
 
-        <form onSubmit={handleAdminLogin} className="space-y-4 text-xs">
-          <div className="space-y-1">
-            <label className="font-semibold text-slate-300">Admin Email</label>
-            <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 focus-within:border-sky-500/50">
-              <Mail className="w-4 h-4 text-slate-500 shrink-0" />
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="bg-transparent text-slate-100 outline-none w-full"
-              />
+        {/* Login Card */}
+        <div className="bg-slate-900/80 backdrop-blur-xl p-8 rounded-3xl border border-sky-500/30 shadow-2xl space-y-6">
+          <form onSubmit={handleAdminLogin} className="space-y-4 text-xs">
+            <div className="space-y-1.5">
+              <label className="font-semibold text-slate-300">Admin Email</label>
+              <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-3 focus-within:border-sky-500/60 transition-colors">
+                <Mail className="w-4 h-4 text-slate-400 shrink-0" />
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="admin@localfix.com"
+                  className="bg-transparent text-slate-100 placeholder-slate-500 outline-none w-full"
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="space-y-1">
-            <label className="font-semibold text-slate-300">Admin Password</label>
-            <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 focus-within:border-sky-500/50">
-              <Lock className="w-4 h-4 text-slate-500 shrink-0" />
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="bg-transparent text-slate-100 outline-none w-full"
-              />
+            <div className="space-y-1.5">
+              <label className="font-semibold text-slate-300">Admin Password</label>
+              <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-3 focus-within:border-sky-500/60 transition-colors">
+                <Lock className="w-4 h-4 text-slate-400 shrink-0" />
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="bg-transparent text-slate-100 placeholder-slate-500 outline-none w-full"
+                />
+              </div>
             </div>
-          </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:opacity-90 text-white font-bold text-xs shadow-lg shadow-sky-500/30 transition-all"
-          >
-            {loading ? 'Verifying Credentials...' : 'Authenticate Admin Session'}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-sky-500/25 transition-all active:scale-[0.99]"
+            >
+              {loading ? 'Verifying Admin Privileges...' : 'Authenticate Admin Session'}
+            </button>
+          </form>
+
+          {/* Quick Admin Helper Box */}
+          <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-3.5 space-y-2 text-center text-xs">
+            <div className="flex items-center justify-center gap-1.5 text-sky-400 font-bold">
+              <KeyRound className="w-3.5 h-3.5" />
+              <span>Admin Credentials Helper</span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Email: <code className="text-slate-200 bg-slate-900 px-1.5 py-0.5 rounded font-mono">dommetisai@localfix.com</code>
+              <br />
+              Password: <code className="text-slate-200 bg-slate-900 px-1.5 py-0.5 rounded font-mono">Dommetisai</code>
+            </p>
+            <button
+              type="button"
+              onClick={handleFillCredentials}
+              className="text-[11px] font-bold text-sky-400 hover:underline pt-1 block mx-auto"
+            >
+              Click to Auto-fill Admin Credentials
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
