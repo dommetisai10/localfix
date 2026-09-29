@@ -11,18 +11,19 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
 def register_customer(payload: UserRegister, db: Session = Depends(get_db)):
-    existing = db.query(User).filter(User.email == payload.email).first()
+    clean_email = payload.email.strip().lower()
+    existing = db.query(User).filter(func.lower(User.email) == clean_email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email is already registered")
 
     user = User(
         full_name=payload.name,
-        email=payload.email,
+        email=clean_email,
         mobile_number=payload.mobile,
-        password_hash=hash_password(payload.password),
+        password_hash=hash_password(payload.password.strip()),
         role=UserRole.CUSTOMER.value,
         location=payload.location,
-        city=payload.city
+        city=payload.city or payload.location
     )
     db.add(user)
     db.commit()
@@ -43,15 +44,16 @@ def register_customer(payload: UserRegister, db: Session = Depends(get_db)):
 
 @router.post("/register-provider", response_model=Token, status_code=status.HTTP_201_CREATED)
 def register_provider(payload: ProviderRegister, db: Session = Depends(get_db)):
-    existing = db.query(User).filter(User.email == payload.email).first()
+    clean_email = payload.email.strip().lower()
+    existing = db.query(User).filter(func.lower(User.email) == clean_email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email is already registered")
 
     user = User(
         full_name=payload.name,
-        email=payload.email,
+        email=clean_email,
         mobile_number=payload.mobile,
-        password_hash=hash_password(payload.password),
+        password_hash=hash_password(payload.password.strip()),
         role=UserRole.PROVIDER.value,
         location=payload.address,
         city=payload.city

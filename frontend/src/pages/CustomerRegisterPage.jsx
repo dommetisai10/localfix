@@ -42,18 +42,8 @@ export default function CustomerRegisterPage() {
       addNotification("Account Created!", "Welcome to LocalFix", "success");
       navigate('/customer/dashboard');
     } catch (err) {
-      // Demo fallback
-      const mockUser = {
-        id: Date.now(),
-        name: fullName,
-        email,
-        mobile,
-        location,
-        role: 'CUSTOMER'
-      };
-      login(mockUser, "mock_token_" + Date.now());
-      addNotification("Registration Successful!", "Welcome to LocalFix", "success");
-      navigate('/customer/dashboard');
+      const msg = err.response?.data?.detail || "Registration failed. Please try again.";
+      addNotification("Registration Failed", msg, "error");
     } finally {
       setLoading(false);
     }

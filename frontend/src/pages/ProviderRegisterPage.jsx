@@ -77,7 +77,7 @@ export default function ProviderRegisterPage() {
 
     try {
       const res = await api.post('/auth/register-provider', providerUser);
-      login(res.data.user || providerUser, res.data.access_token || "mock_provider_token");
+      login(res.data.user, res.data.access_token);
       addNotification(
         "Application Submitted!",
         "Your provider account is currently PENDING Admin approval. Once approved, you can accept customer bookings.",
@@ -85,13 +85,8 @@ export default function ProviderRegisterPage() {
       );
       navigate('/provider/dashboard');
     } catch (err) {
-      login(providerUser, "mock_provider_token_" + Date.now());
-      addNotification(
-        "Application Submitted!",
-        "Your provider account is currently PENDING Admin approval.",
-        "info"
-      );
-      navigate('/provider/dashboard');
+      const msg = err.response?.data?.detail || "Registration failed. Please try again.";
+      addNotification("Registration Failed", msg, "error");
     } finally {
       setLoading(false);
     }
