@@ -38,17 +38,26 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS setup
-cors_origins_str = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
+# CORS setup - support local and production frontend origins (including Vercel)
+cors_origins_str = os.getenv("CORS_ORIGINS", "*")
 origins = [origin.strip() for origin in cors_origins_str.split(",") if origin.strip()]
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins if origins else ["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+if "*" in origins or not origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=r"https?://.*",
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # Register API Routers
 app.include_router(auth.router)

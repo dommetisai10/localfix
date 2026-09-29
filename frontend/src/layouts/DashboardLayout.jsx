@@ -6,7 +6,7 @@ import { useNotification } from '../context/NotificationContext';
 import AiAssistantModal from '../components/AiAssistantModal';
 
 export default function DashboardLayout() {
-  const { user, isCustomer, isProvider, isAdmin, logout } = useAuth();
+  const { user, isCustomer, isProvider, isAdmin, logout, loading } = useAuth();
   const { notifications, unreadCount, markAllAsRead } = useNotification();
   const [notifOpen, setNotifOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
@@ -14,6 +14,25 @@ export default function DashboardLayout() {
 
   const navigate = useNavigate();
   const location = useLocation();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-sky-500"></div>
+      </div>
+    );
+  }
+
+  // Role guarding
+  if (location.pathname.startsWith('/admin') && !isAdmin) {
+    return <Navigate to="/admin/login" replace />;
+  }
+  if (location.pathname.startsWith('/provider') && !isProvider && !isAdmin) {
+    return <Navigate to="/login" replace />;
+  }
+  if (location.pathname.startsWith('/customer') && !user) {
+    return <Navigate to="/login" replace />;
+  }
 
   const handleLogout = () => {
     logout();

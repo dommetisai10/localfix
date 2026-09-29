@@ -22,6 +22,9 @@ ENV/
 env.bak/
 venv.bak/
 .pytest_cache/
+*.db
+*.sqlite
+*.sqlite3
 
 # Production build
 dist/

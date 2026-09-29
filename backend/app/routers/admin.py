@@ -120,6 +120,25 @@ def reject_provider(id: int, db: Session = Depends(get_db), admin=Depends(get_cu
     return {"message": "Provider rejected", "status": provider.status}
 
 
+@router.put("/providers/{id}/suspend")
+def suspend_provider(id: int, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    provider = db.query(Provider).filter(Provider.id == id).first()
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+
+    provider.status = ProviderStatus.SUSPENDED.value
+
+    db.add(Notification(
+        user_id=provider.user_id,
+        title="Account Status Update",
+        message="Your provider account has been SUSPENDED by Admin.",
+        notification_type="approval"
+    ))
+    db.commit()
+    return {"message": "Provider suspended", "status": provider.status}
+
+
+
 @router.get("/bookings", response_model=List[BookingOut])
 def get_admin_bookings(db: Session = Depends(get_db), admin=Depends(get_current_admin)):
     bookings = db.query(Booking).order_by(Booking.id.desc()).all()

@@ -30,7 +30,10 @@ api.interceptors.response.use(
       localStorage.removeItem('localfix_token');
       localStorage.removeItem('localfix_user');
       if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login?session_expired=true';
+        const targetLogin = window.location.pathname.startsWith('/admin')
+          ? '/admin/login?session_expired=true'
+          : '/login?session_expired=true';
+        window.location.href = targetLogin;
       }
     }
     return Promise.reject(error);

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import api from '../services/api';
 
 const AuthContext = createContext();
 
@@ -18,7 +19,27 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('localfix_token');
       }
     }
-    setLoading(false);
+
+    // Verify token with backend
+    if (token) {
+      api.get('/auth/me')
+        .then((res) => {
+          if (res.data) {
+            setUser(res.data);
+            localStorage.setItem('localfix_user', JSON.stringify(res.data));
+          }
+        })
+        .catch(() => {
+          // Token invalid on backend
+          setUser(null);
+          setToken(null);
+          localStorage.removeItem('localfix_user');
+          localStorage.removeItem('localfix_token');
+        })
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
   }, [token]);
 
   const login = (userData, authToken) => {
