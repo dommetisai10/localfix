@@ -110,12 +110,6 @@ def seed_database(db: Session):
         db.commit()
 
     # 2. Seed Admin user
-    old_admins = db.query(User).filter(User.email.in_(["admin@localfix.com", "dommetisailocalfix.com"])).all()
-    for oa in old_admins:
-        db.delete(oa)
-    if old_admins:
-        db.commit()
-
     admin = db.query(User).filter(User.email == "dommetisai@localfix.com").first()
     if not admin:
         admin = User(
@@ -128,6 +122,26 @@ def seed_database(db: Session):
             city="Ravulapalem"
         )
         db.add(admin)
+    else:
+        admin.password_hash = hash_password("Dommetisai")
+        admin.role = UserRole.ADMIN.value
+
+    # Also seed standard admin account for backup admin login
+    admin_backup = db.query(User).filter(User.email == "admin@localfix.com").first()
+    if not admin_backup:
+        admin_backup = User(
+            full_name="System Administrator",
+            email="admin@localfix.com",
+            mobile_number="+91 9573842155",
+            password_hash=hash_password("admin123"),
+            role=UserRole.ADMIN.value,
+            location="Main Office",
+            city="Local Area"
+        )
+        db.add(admin_backup)
+    else:
+        admin_backup.password_hash = hash_password("admin123")
+        admin_backup.role = UserRole.ADMIN.value
 
     # 3. Seed Sample Customer if missing
     customer = db.query(User).filter(User.email == "customer@example.com").first()
